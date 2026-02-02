@@ -8,7 +8,7 @@ Here is a list of the included problem's solutions:
 <summary>Click to expand</summary>
 
   
-  Solutions added so far: 104 (Just hit 100 problems!)
+  Solutions added so far: 106 (Just hit 100 problems!)
 
 Starter
   - Starter Problems: All
@@ -35,8 +35,8 @@ AIO
   - AIO 2009: p1-3
   - AIO 2008: p1
   - AIO 2007: p1-p3
-  - AIO 2006: p1-p3
-  - AIO 2005: p1, p2
+  - AIO 2006: p1-p4
+  - AIO 2005: p1-p3
 
 AIIO
   - 2025 p1
