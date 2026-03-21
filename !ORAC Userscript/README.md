@@ -5,6 +5,7 @@ This is a cool userscript that I use for orac2.info. These are the features:
 - Organises problems into more tags (i.e. starter problems)
 - Allows for custom tagging / bookmarking of problems
 - Adds some small style changes
+- Adds approximations of difficulty for problems, by solve count
 
 Right now, the order of tags is very specific (i might add detection if someone has unlocked seln).
 
