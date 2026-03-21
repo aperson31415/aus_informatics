@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         ORAC Tag Manager
 // @namespace    http://tampermonkey.net/
-// @version      v3.0.2
-// @description  Custom tags in orac, hidden problems.
+// @version      v3.4.2
+// @description  Custom tags in orac, hidden problems, difficulty ratings
 // @author       a_person31415
 // @match        https://orac2.info/hub/personal/*
 // @match        https://orac.amt.edu.au/hub/personal/*
@@ -17,22 +17,31 @@
 (function() {
     'use strict';
 
+    function $(selector) {
+        let contents = document.querySelectorAll(selector);
+        if(contents.length == 1) {return contents[0];}
+        return contents;
+    }
+
     const TAG_ORDER = ["starter", "training", "aio", "acio", "aiio", "alpha", "fario", "seln", "cpp-practice", "custom-tags"];
 
     GM_addStyle(`
         .badge-tag { margin-right: 4px; cursor: pointer; border: 1px solid #ccc; background-color: #f8f9fa; color: #333; }
         .badge-tag.selected { background-color: #d9534f !important; color: white !important; border-color: #d43f3a !important; }
         .badge-tag:hover { opacity: 0.8; }
+        .progress-column, .difficulty-column {bottom-border: 1px solid #dee2e6;}
+        .difficulty-column {width: 30%;}
+        .progress-column {width:20%;}
+        .kooltable {border-spacing: 0 10px; border-collapse: separate; margin-bottom: 0rem !important;}
     `);
 
-    function tag_element(content) {
-        let elem = document.createElement("span");
+    function tag_element(content, parent = document) {
+        let elem = parent.createElement("span");
         elem.classList.add("badge", "badge-tag");
         elem.innerText = content;
         return elem;
     }
 
-    // --- PROBLEM PAGE LOGIC ---
     if(window.location.href.includes("problem")) {
         let score_badge = document.querySelector(".badge.hub-badge");
         if (score_badge) {
@@ -41,13 +50,13 @@
                 score: score_badge.innerText.trim(),
                 style: score_badge.className
             });
-            let name = document.querySelector("h1.mb-0")?.innerText.trim();
+            let name = $("h1.mb-0")?.innerText.trim();
             if (name) GM_setValue("name_" + window.location.href, name);
         }
 
         function render_tags_on_problem_page() {
             if (!window.bookmark_section) return;
-            window.bookmark_section.innerHTML = "<br>Custom Tags: ";
+            window.bookmark_section.innerHTML = "Custom Tags: ";
             let curr_tags = GM_getValue("rev_tags", {});
             if (curr_tags[window.location.href]) {
                 curr_tags[window.location.href].forEach(t => window.bookmark_section.appendChild(tag_element(t)));
@@ -60,11 +69,66 @@
             window.bookmark_section.appendChild(minus_tag);
         }
 
-        let info_box = document.querySelector(".mb-3");
-        if (info_box) {
-            window.bookmark_section = document.createElement("div");
+        function rating_estimation_elem(solves) {
+            let rating_benchmarks = {
+                800: ["0 &#9733;", "#A52A2A"],
+                500: ["1 &#9733;", "#808080"],
+                300: ["2 &#9733;", "#008000"],
+                100: ["3 &#9733;", "#03A89E"],
+                50: ["4 &#9733;", "#0000FF"],
+                10: ["5 &#9733;", "#a0a"],
+                2: ["6 &#9733;", "#bb0"],
+                0: ["7 &#9733;", "#FF8C00"],
+                1: ["8 &#9733;", "#FF0000"]
+            };
+
+            let lower_bound = 0, stars = -1;
+
+            if (solves >= 800) {lower_bound = 800; stars = 0;}
+            else if(solves >= 500) {lower_bound = 500; stars = 1;}
+            else if(solves >= 300) {lower_bound = 300; stars = 2;}
+            else if(solves >= 100) {lower_bound = 100; stars = 3;}
+            else if(solves >= 50) {lower_bound = 50; stars = 4;}
+            else if(solves >= 10) {lower_bound = 10; stars = 5;}
+            else if(solves >= 2) {lower_bound = 2; stars = 6;}
+            else if(solves >= 1) {lower_bound = 0; stars = 7;}
+            else {lower_bound = 1; stars = 8;}
+
+            let elem = document.createElement("b");
+            elem.style.color = rating_benchmarks[lower_bound][1];
+            elem.innerHTML = rating_benchmarks[lower_bound][0];
+
+            let uncoloured = document.createElement("span");
+            uncoloured.style.color = "#000000";
+
+            if (solves != 1) {
+                uncoloured.innerHTML = " (" + (solves) + " solves)";
+            } else {
+                uncoloured.innerHTML = " (1 solve)";
+            }
+
+            elem.appendChild(uncoloured);
+
+            return {"elem":elem, "stars":stars};
+        }
+
+        if ($("tbody")[1]) {
+            window.stats_bar = document.createElement("tr");
+            window.bookmark_section = document.createElement("td");
+            let diff_bar = document.createElement("td");
+            diff_bar.style.textAlign = "right";
+            document.querySelector(".mb-3").classList.add("kooltable");
+
+            (async () => {
+                let original_diffelem = rating_estimation_elem(await set_solvecount(window.location.href)).elem;
+                original_diffelem.classList.add("text-nowrap");
+                diff_bar.appendChild(original_diffelem);
+            })();
+
             render_tags_on_problem_page();
-            info_box.appendChild(window.bookmark_section);
+            ($("tbody")[1]).appendChild(window.stats_bar);
+            window.stats_bar.appendChild(window.bookmark_section);
+            window.stats_bar.appendChild(diff_bar);
         }
 
         function new_tag() {
@@ -100,9 +164,48 @@
                 render_tags_on_problem_page();
             }
         }
+
+        // Difficulty 
+
+        async function get_solvecount(problem_url) {
+            let url = problem_url + "/hof";
+            try {
+                const res = await fetch(url);
+                const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+                
+                // Standard problem page
+                let solversList = doc.querySelector("#solversList");
+                if (solversList) {
+                    return doc.querySelector("b")?.innerText || "0";
+                } 
+                
+                // Leaderboard/Contest style problem
+                let solves = 0;
+                let solve_elems = doc.querySelectorAll(".solvecount");
+                solve_elems.forEach((elem) => {
+                    if (elem.innerText.trim() === "100") {
+                        solves++;
+                    }
+                });
+                return solves.toString();
+            } catch (e) {
+                return "0";
+            }
+        }
+
+        async function set_solvecount(problem_url) {
+            let solves = GM_getValue("solves_" + problem_url, -1);
+            if (solves == -1) {
+                let fetched = await get_solvecount(problem_url);
+                GM_setValue("solves_" + problem_url, fetched);
+                solves = fetched;
+            }
+            return solves;
+        }
+
+
     }
 
-    // --- HUB PAGE LOGIC ---
     if (window.location.href.includes("personal")) {
         async function get_badge_data(url) {
             // Check individual storage key first
@@ -166,7 +269,7 @@
                 });
             }
 
-            const tags_cont = document.querySelector(".tags-container");
+            const tags_cont = $(".tags-container");
             tags_cont.innerHTML = `<span class="tags-description">Tags:</span>`;
             TAG_ORDER.forEach(name => {
                 let badge = tag_element(name);
@@ -197,7 +300,7 @@
                     </div>`;
                 document.getElementById("show-sets").appendChild(div);
 
-                let score_elems = document.querySelectorAll("td.progress-column");
+                let score_elems = $("td.progress-column");
                 score_elems.forEach((elem) => {
                     if (elem.innerHTML.includes("Viewed")) {
                         elem.innerHTML = `<span class="badge badge-no-submission hub-badge" size="30">0</span>`;
@@ -206,14 +309,14 @@
 
                 let starter_sets = ["starter", "starterset1", "starterset1challenge", "starterset2", "starterset2challenge", "starterset3", "starterset3challenge"];
                 starter_sets.forEach((set_name) => {
-                    document.querySelector(`[data-target="#problem-set-`+set_name+`"]`).parentElement.classList.add("set-tag-starter");
-                    document.querySelector(`[data-target="#problem-set-`+set_name+`"]`).children[0].children[0].children[1].children[0].children[1].setAttribute("data-original-title", "Tags: starter");
+                    $(`[data-target="#problem-set-`+set_name+`"]`).parentElement.classList.add("set-tag-starter");
+                    $(`[data-target="#problem-set-`+set_name+`"]`).children[0].children[0].children[1].children[0].children[1].setAttribute("data-original-title", "Tags: starter");
                 });
 
                 let acio_sets = ["acio25"];
                 acio_sets.forEach((set_name) => {
-                    document.querySelector(`[data-target="#problem-set-`+set_name+`"]`).parentElement.classList.add("set-tag-acio");
-                    document.querySelector(`[data-target="#problem-set-`+set_name+`"]`).children[0].children[0].children[1].children[0].children[1].setAttribute("data-original-title", "Tags: acio");
+                    $(`[data-target="#problem-set-`+set_name+`"]`).parentElement.classList.add("set-tag-acio");
+                    $(`[data-target="#problem-set-`+set_name+`"]`).children[0].children[0].children[1].children[0].children[1].setAttribute("data-original-title", "Tags: acio");
                 });
 
                 let badgePromises = set.problems.map(async (p) => {
@@ -250,8 +353,198 @@
                 });
             }
             if (typeof window.updateSetDisplay === 'function') window.updateSetDisplay();
-            if (typeof $ !== 'undefined') $('[data-toggle="tooltip"]').tooltip();
+            if (typeof querySelector !== 'undefined') $('[data-toggle="tooltip"]').tooltip();
         }
         load_from_data();
+
+        // Solve counts
+        function rating_estimation_elem(solves) {
+            let rating_benchmarks = {
+                800: ["0 &#9733;", "#A52A2A"],
+                500: ["1 &#9733;", "#808080"],
+                300: ["2 &#9733;", "#008000"],
+                200: ["3 &#9733;", "#03A89E"],
+                100: ["4 &#9733;", "#0000FF"],
+                50: ["5 &#9733;", "#a0a"],
+                10: ["6 &#9733;", "#bb0"],
+                5: ["7 &#9733;", "#FF8C00"],
+                1: ["8 &#9733;", "#FF0000"]
+            };
+
+            let lower_bound = 0, stars = -1;
+
+            if (solves >= 800) {lower_bound = 800; stars = 0;}
+            else if(solves >= 500) {lower_bound = 500; stars = 1;}
+            else if(solves >= 300) {lower_bound = 300; stars = 2;}
+            else if(solves >= 200) {lower_bound = 200; stars = 3;}
+            else if(solves >= 100) {lower_bound = 100; stars = 4;}
+            else if(solves >= 50) {lower_bound = 50; stars = 5;}
+            else if(solves >= 10) {lower_bound = 10; stars = 6;}
+            else if(solves >= 5) {lower_bound = 5; stars = 7;}
+            else {lower_bound = 1; stars = 8;}
+
+            let elem = document.createElement("b");
+            elem.style.color = rating_benchmarks[lower_bound][1];
+            elem.innerHTML = rating_benchmarks[lower_bound][0];
+
+            let uncoloured = document.createElement("span");
+            uncoloured.style.color = "#000000";
+
+            if (solves != 1) {
+                uncoloured.innerHTML = " (" + (solves) + " solves)";
+            } else {
+                uncoloured.innerHTML = " (1 solve)";
+            }
+
+            elem.appendChild(uncoloured);
+
+            return {"elem":elem, "stars":stars};
+        }
+
+        function star_display(stars) {
+            let rating_benchmarks = {
+                0: ["0 &#9733;", "#A52A2A"],
+                1: ["1 &#9733;", "#808080"],
+                2: ["2 &#9733;", "#008000"],
+                3: ["3 &#9733;", "#03A89E"],
+                4: ["4 &#9733;", "#0000FF"],
+                5: ["5 &#9733;", "#a0a"],
+                6: ["6 &#9733;", "#bb0"],
+                7: ["7 &#9733;", "#FF8C00"],
+                8: ["8 &#9733;", "#FF0000"]
+            };
+            let elem = document.createElement("b");
+            elem.innerHTML = rating_benchmarks[stars][0];
+            elem.style.color = rating_benchmarks[stars][1];
+
+            return elem;
+        }
+
+        // --- SOLVE COUNT LOGIC ---
+        
+        async function get_solvecount(problem_url) {
+            let url = problem_url + "/hof";
+            try {
+                const res = await fetch(url);
+                const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+                
+                // Standard problem page
+                let solversList = doc.querySelector("#solversList");
+                if (solversList) {
+                    return doc.querySelector("b")?.innerText || "0";
+                } 
+                
+                // Leaderboard/Contest style problem
+                let solves = 0;
+                let solve_elems = doc.querySelectorAll(".solvecount");
+                solve_elems.forEach((elem) => {
+                    if (elem.innerText.trim() === "100") {
+                        solves++;
+                    }
+                });
+                return solves.toString(); // <--- FIXED: Now returns the count
+            } catch (e) {
+                return "0";
+            }
+        }
+
+        async function set_solvecount(problem_url) {
+            let solves = GM_getValue("solves_" + problem_url, -1);
+            if (solves == -1) {
+                let fetched = await get_solvecount(problem_url);
+                GM_setValue("solves_" + problem_url, fetched);
+                solves = fetched;
+            }
+            return solves;
+        }
+
+        function parent_fullysolved(problem) {
+            for (let neighbour of problem.parentElement.children) {
+                if (neighbour.children[1].classList.contains("difficulty-column")) {
+                    if (!(neighbour.children[1].innerHTML.includes("solve"))) {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        (async () => {
+            let sets = document.querySelectorAll(".collapse.show.set-problems");
+
+            for (const set of sets) {
+                let table = set.querySelector("table");
+                if (!table) continue;
+
+                let headerRow = set.parentElement.children[0].querySelector("tr");;
+                if (headerRow && !headerRow.querySelector(".th-diff")) {
+                    let th = document.createElement("th");
+                    th.classList.add("difficulty-column", "th-diff");
+                    th.innerHTML = "";
+                    // Insert after the first header (Problem Name)
+                    headerRow.children[0].after(th);
+                }
+
+                let rows = table.querySelectorAll("tbody tr");
+                let fetchQueue = [];
+
+                rows.forEach(row => {
+                    // Check if this row is a header row
+                    if (row.querySelector("th") || row.classList.contains("thead-dark")) return;
+                    // Prevent duplicate columns if script re-runs
+                    if (row.querySelector(".difficulty-column")) return;
+
+                    let diffTd = document.createElement("td");
+                    diffTd.classList.add("difficulty-column");
+                    diffTd.innerHTML = ""; 
+                    row.children[0].after(diffTd);
+
+                    let link = row.querySelector("a")?.href;
+                    if (link) {
+                        fetchQueue.push({ cell: diffTd, url: link });
+                    }
+                });
+
+                for (const item of fetchQueue) {
+                    let result = await set_solvecount(item.url);
+                    item.cell.innerHTML = "";
+                    item.cell.appendChild(rating_estimation_elem(result).elem);
+                    let diff_col = item.cell.parentElement.parentElement.parentElement.parentElement.parentElement.querySelector("table tr .difficulty-column");
+                    
+                    if(diff_col.hasAttribute("min_stars")) {
+                        diff_col.setAttribute("min_stars", Math.min(diff_col.getAttribute("min_stars"), rating_estimation_elem(result).stars));
+                    } else {
+                        diff_col.setAttribute("min_stars", rating_estimation_elem(result).stars)
+                    }
+
+                    if(diff_col.hasAttribute("max_stars")) {
+                        diff_col.setAttribute("max_stars", Math.max(diff_col.getAttribute("max_stars"), rating_estimation_elem(result).stars));
+                    } else {
+                        diff_col.setAttribute("max_stars", rating_estimation_elem(result).stars);
+                    }
+
+                    if(parent_fullysolved(item.cell.parentElement)) {
+                        if (diff_col.getAttribute("max_stars") == diff_col.getAttribute("min_stars")) {
+                            diff_col.innerHTML = '';
+                            diff_col.appendChild(star_display(diff_col.getAttribute("max_stars")));
+                        } else {
+                            diff_col.innerHTML = '';
+                            let star_range_elem_to = document.createElement("span");
+                            star_range_elem_to.innerText = " to ";
+
+                            let star_range_elem = document.createElement("span");
+                            star_range_elem.appendChild(star_display(diff_col.getAttribute("min_stars")));
+                            star_range_elem.appendChild(star_range_elem_to)
+                            star_range_elem.appendChild(star_display(diff_col.getAttribute("max_stars")));
+
+                            diff_col.appendChild(star_range_elem);
+                        }
+                    }
+                }
+            }
+        })();
     }
 })();
