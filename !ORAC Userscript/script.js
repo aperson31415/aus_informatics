@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ORAC Userscript
 // @namespace    http://tampermonkey.net/
-// @version      v2.9.3
+// @version      v2.9.6
 // @description  Custom tags in orac, hidden problems, difficulty approximation, searching upgrade, custom styling & ordering
 // @author       a_person31415
 // @match        https://orac2.info/hub/personal/*
@@ -50,6 +50,13 @@
         input[type=range]::-webkit-slider-thumb { pointer-events: all; width: 16px; height: 16px; border-radius: 50%; background: #4CAF50; cursor: pointer; -webkit-appearance: none; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         input[type=range]::-moz-range-thumb { pointer-events: all; width: 16px; height: 16px; border-radius: 50%; background: #4CAF50; cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         input[type=range]:focus { outline: none; }
+
+        .custom-search {border-radius: 0.5rem; border: 1px solid gray; margin-left: 0.25rem; height: 25px;}
+        .custom-search:focus, .custom-search:hover {outline: 1px solid #343a40}
+
+        .problemset-display[data-visible="false"] {height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; overflow: hidden; border: none;}
+        tr[data-visible="false"] {height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin-top: 0 !important; margin-bottom: 0 !important; overflow: hidden !important; border: none; visibility: hidden;}
+        tr[data-visible="false"] td {padding: 0 !important; margin: 0 !important; height: 0 !important; font-size: 0 !important; line-height: 0 !important; border: none !important;}
     `);
 
     function tag_element(content, parent = document) {
@@ -91,12 +98,13 @@
                 800: ["0 &#9733;", "#A52A2A"],
                 500: ["1 &#9733;", "#808080"],
                 300: ["2 &#9733;", "#008000"],
-                100: ["3 &#9733;", "#03A89E"],
-                50: ["4 &#9733;", "#0000FF"],
-                10: ["5 &#9733;", "#a0a"],
-                2: ["6 &#9733;", "#bb0"],
-                0: ["7 &#9733;", "#FF8C00"],
-                1: ["8 &#9733;", "#FF0000"]
+                200: ["3 &#9733;", "#03A89E"],
+                100: ["4 &#9733;", "#0000FF"],
+                50: ["5 &#9733;", "#a0a"],
+                10: ["6 &#9733;", "#bb0"],
+                5: ["7 &#9733;", "#ffa200"],
+                2: ["8 &#9733;", "#ff7b00"],
+                0: ["9 &#9733;", "#ff0000"]
             };
 
             let lower_bound = 0, stars = -1;
@@ -104,12 +112,13 @@
             if (solves >= 800) {lower_bound = 800; stars = 0;}
             else if(solves >= 500) {lower_bound = 500; stars = 1;}
             else if(solves >= 300) {lower_bound = 300; stars = 2;}
-            else if(solves >= 100) {lower_bound = 100; stars = 3;}
-            else if(solves >= 50) {lower_bound = 50; stars = 4;}
-            else if(solves >= 10) {lower_bound = 10; stars = 5;}
-            else if(solves >= 2) {lower_bound = 2; stars = 6;}
-            else if(solves >= 1) {lower_bound = 0; stars = 7;}
-            else {lower_bound = 1; stars = 8;}
+            else if(solves >= 200) {lower_bound = 200; stars = 3;}
+            else if(solves >= 100) {lower_bound = 100; stars = 4;}
+            else if(solves >= 50) {lower_bound = 50; stars = 5;}
+            else if(solves >= 10) {lower_bound = 10; stars = 6;}
+            else if(solves >= 5) {lower_bound = 5; stars = 7;}
+            else if(solves >= 2) {lower_bound = 2; stars = 8;}
+            else {lower_bound = 0; stars = 9;}
 
             let elem = document.createElement("b");
             elem.style.color = rating_benchmarks[lower_bound][1];
@@ -430,8 +439,9 @@
                 100: ["4 &#9733;", "#0000FF"],
                 50: ["5 &#9733;", "#a0a"],
                 10: ["6 &#9733;", "#bb0"],
-                5: ["7 &#9733;", "#FF8C00"],
-                1: ["8 &#9733;", "#FF0000"]
+                5: ["7 &#9733;", "#ffa200"],
+                2: ["8 &#9733;", "#ff7b00"],
+                0: ["9 &#9733;", "#ff0000"]
             };
 
             let lower_bound = 0, stars = -1;
@@ -444,7 +454,8 @@
             else if(solves >= 50) {lower_bound = 50; stars = 5;}
             else if(solves >= 10) {lower_bound = 10; stars = 6;}
             else if(solves >= 5) {lower_bound = 5; stars = 7;}
-            else {lower_bound = 1; stars = 8;}
+            else if(solves >= 2) {lower_bound = 2; stars = 8;}
+            else {lower_bound = 0; stars = 9;}
 
             let elem = document.createElement("b");
             elem.style.color = rating_benchmarks[lower_bound][1];
@@ -473,8 +484,9 @@
                 4: ["4 &#9733;", "#0000FF"],
                 5: ["5 &#9733;", "#a0a"],
                 6: ["6 &#9733;", "#bb0"],
-                7: ["7 &#9733;", "#FF8C00"],
-                8: ["8 &#9733;", "#FF0000"]
+                7: ["7 &#9733;", "#ffa200"],
+                8: ["8 &#9733;", "#ff7b00"],
+                9: ["9 &#9733;", "#ff0000"]
             };
             let elem = document.createElement("b");
             elem.innerHTML = rating_benchmarks[stars][0];
@@ -652,9 +664,9 @@
         let slidercont = document.createElement("div"); slidercont.classList.add("slider-container");
         let slidertrack = document.createElement("div"); slidertrack.classList.add("slider-track");
         let sliderrange = document.createElement("div"); sliderrange.classList.add("slider-range"); sliderrange.id = "slider-range";
-        let minslide = document.createElement("input"); minslide.id = "minRange"; minslide.setAttribute("type", "range"); minslide.setAttribute("min", "0"); minslide.setAttribute("max", "8"); minslide.setAttribute("value", "0");
-        let maxslide = document.createElement("input"); maxslide.id = "maxRange"; maxslide.setAttribute("type", "range"); maxslide.setAttribute("min", "0"); maxslide.setAttribute("max", "8"); maxslide.setAttribute("value", "8");
-        let sliderdisplay = document.createElement("span"); sliderdisplay.id = "rangevalue"; sliderdisplay.innerText = "0 &#9733; - 8 &#9733;";
+        let minslide = document.createElement("input"); minslide.id = "minRange"; minslide.setAttribute("type", "range"); minslide.setAttribute("min", "0"); minslide.setAttribute("max", "9"); minslide.setAttribute("value", "0");
+        let maxslide = document.createElement("input"); maxslide.id = "maxRange"; maxslide.setAttribute("type", "range"); maxslide.setAttribute("min", "0"); maxslide.setAttribute("max", "9"); maxslide.setAttribute("value", "9");
+        let sliderdisplay = document.createElement("span"); sliderdisplay.id = "rangevalue"; sliderdisplay.innerText = "0 &#9733; - 9 &#9733;";
 
         let sliderWrapper = document.createElement("div"); 
         sliderWrapper.style = "position:relative; width:200px; height:30px; margin-left:10px;";
@@ -708,5 +720,56 @@
 
         minslide.addEventListener('input', filterDiff);
         maxslide.addEventListener('input', filterDiff);
+
+        // Search bar
+        let searchcont = document.createElement("div"); searchcont.classList.add("search-container");
+        let searchlabel = document.createElement("span"); searchlabel.innerText = "Includes: ";
+        let searchbar = document.createElement("input"); searchbar.classList.add("custom-search"); searchbar.setAttribute("placeholder", "Type a phrase");
+        searchcont.appendChild(searchlabel); searchcont.appendChild(searchbar);
+        $(".slider-container").after(searchcont);
+
+        searchbar.addEventListener('input', filterSearch);
+
+        function filterSearch() {
+            let searchInput = document.querySelector(".custom-search");
+            if (!searchInput) return;
+            let searchphrase = searchInput.value.toLowerCase();
+
+            document.querySelectorAll(".problemset-display.set-table").forEach((set) => {
+                let oneProblemMatches = false;
+                
+                // 1. Check if the Category/Set Title matches the search
+                let titleHeader = set.querySelector('[scope="col"]');
+                let setTitle = titleHeader ? titleHeader.innerText.toLowerCase() : "";
+                let setTitleMatches = setTitle.includes(searchphrase);
+
+                let collapseDiv = set.querySelector(".collapse");
+                if (!collapseDiv) return;
+
+                let problems = collapseDiv.querySelectorAll("tr");
+                problems.forEach((problem) => {
+                    if (problem.querySelector("th") || problem.closest("thead")) return;
+
+                    let problemLink = problem.querySelector("a");
+                    if (!problemLink) return;
+
+                    let problemName = problemLink.innerText.toLowerCase();
+                    let problemMatches = problemName.includes(searchphrase);
+
+                    if (searchphrase === "" || problemMatches || setTitleMatches) {
+                        problem.setAttribute("data-visible", "true");
+                        oneProblemMatches = true; 
+                    } else {
+                        problem.setAttribute("data-visible", "false");
+                    }
+                });
+
+                if (searchphrase === "" || setTitleMatches || oneProblemMatches) {
+                    set.setAttribute("data-visible", "true");
+                } else {
+                    set.setAttribute("data-visible", "false");
+                }
+            });
+        }
     }
 })();
