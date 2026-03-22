@@ -1,17 +1,19 @@
 // ==UserScript==
 // @name         ORAC Tag Manager
 // @namespace    http://tampermonkey.net/
-// @version      v3.4.2
-// @description  Custom tags in orac, hidden problems, difficulty ratings
+// @version      v2.8.0
+// @description  Custom tags in orac, hidden problems.
 // @author       a_person31415
 // @match        https://orac2.info/hub/personal/*
 // @match        https://orac.amt.edu.au/hub/personal/*
 // @match        https://orac2.info/problem/*
 // @match        https://orac.amt.edu.au/problem/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=orac2.info
-// @grant         GM_setValue
-// @grant         GM_getValue
-// @grant         GM_addStyle
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_addStyle
+// @grant        GM_listValues
+// @grant        GM_deleteValue
 // ==/UserScript==
 
 (function() {
@@ -23,16 +25,20 @@
         return contents;
     }
 
-    const TAG_ORDER = ["starter", "training", "aio", "acio", "aiio", "alpha", "fario", "seln", "cpp-practice", "custom-tags"];
+    let TAG_ORDER = ["starter", "training", "aio", "acio", "aiio", "alpha", "fario", "camp", "seln", "apio", "ioi","cpp-practice", "testing", "custom-tags"];
+    let NEW_TAGS = ["starter", "training", "acio", "cpp-practice", "custom-tags"];
 
     GM_addStyle(`
-        .badge-tag { margin-right: 4px; cursor: pointer; border: 1px solid #ccc; background-color: #f8f9fa; color: #333; }
+        .badge-tag { margin-right: 4px; cursor: pointer; background-color: #f8f9fa; color: #333; user-select: none;}
         .badge-tag.selected { background-color: #d9534f !important; color: white !important; border-color: #d43f3a !important; }
         .badge-tag:hover { opacity: 0.8; }
         .progress-column, .difficulty-column {bottom-border: 1px solid #dee2e6;}
         .difficulty-column {width: 30%;}
         .progress-column {width:20%;}
         .kooltable {border-spacing: 0 10px; border-collapse: separate; margin-bottom: 0rem !important;}
+        .koolbutton {border: none; border-radius: .5rem; outline: none; cursor: pointer; user-select: none;}
+        .koolbutton:focus {outline: none;}
+        .koolbutton:hover {opacity: 0.8;}
     `);
 
     function tag_element(content, parent = document) {
@@ -270,8 +276,22 @@
             }
 
             const tags_cont = $(".tags-container");
+
+            let curr_tags = $(".badge", tags_cont);
+            let ORIGINAL_TAGS = [];
+            curr_tags.forEach((tag) => {
+                ORIGINAL_TAGS.push(tag.innerText);
+            });
+
             tags_cont.innerHTML = `<span class="tags-description">Tags:</span>`;
             TAG_ORDER.forEach(name => {
+                console.log(name);
+                if (!(NEW_TAGS.includes(name))) {
+                    if (!(ORIGINAL_TAGS.includes(name))) {
+                        return;
+                    }
+                }
+
                 let badge = tag_element(name);
                 badge.setAttribute("onclick", "toggleSetTagSelected(this);");
                 tags_cont.appendChild(badge);
@@ -303,7 +323,7 @@
                 let score_elems = $("td.progress-column");
                 score_elems.forEach((elem) => {
                     if (elem.innerHTML.includes("Viewed")) {
-                        elem.innerHTML = `<span class="badge badge-no-submission hub-badge" size="30">0</span>`;
+                        elem.innerHTML = `Not attempted`;
                     }
                 });
 
@@ -438,11 +458,11 @@
                 let solves = 0;
                 let solve_elems = doc.querySelectorAll(".solvecount");
                 solve_elems.forEach((elem) => {
-                    if (elem.innerText.trim() === "100") {
+                    if (elem.innerText.trim() == "100") {
                         solves++;
                     }
                 });
-                return solves.toString(); // <--- FIXED: Now returns the count
+                return solves.toString();
             } catch (e) {
                 return "0";
             }
@@ -472,79 +492,104 @@
             return true;
         }
 
-        (async () => {
-            let sets = document.querySelectorAll(".collapse.show.set-problems");
+        function load_solves() {
+            (async () => {
+                let sets = document.querySelectorAll(".collapse.show.set-problems");
 
-            for (const set of sets) {
-                let table = set.querySelector("table");
-                if (!table) continue;
+                for (const set of sets) {
+                    let table = set.querySelector("table");
+                    if (!table) continue;
 
-                let headerRow = set.parentElement.children[0].querySelector("tr");;
-                if (headerRow && !headerRow.querySelector(".th-diff")) {
-                    let th = document.createElement("th");
-                    th.classList.add("difficulty-column", "th-diff");
-                    th.innerHTML = "";
-                    // Insert after the first header (Problem Name)
-                    headerRow.children[0].after(th);
-                }
-
-                let rows = table.querySelectorAll("tbody tr");
-                let fetchQueue = [];
-
-                rows.forEach(row => {
-                    // Check if this row is a header row
-                    if (row.querySelector("th") || row.classList.contains("thead-dark")) return;
-                    // Prevent duplicate columns if script re-runs
-                    if (row.querySelector(".difficulty-column")) return;
-
-                    let diffTd = document.createElement("td");
-                    diffTd.classList.add("difficulty-column");
-                    diffTd.innerHTML = ""; 
-                    row.children[0].after(diffTd);
-
-                    let link = row.querySelector("a")?.href;
-                    if (link) {
-                        fetchQueue.push({ cell: diffTd, url: link });
-                    }
-                });
-
-                for (const item of fetchQueue) {
-                    let result = await set_solvecount(item.url);
-                    item.cell.innerHTML = "";
-                    item.cell.appendChild(rating_estimation_elem(result).elem);
-                    let diff_col = item.cell.parentElement.parentElement.parentElement.parentElement.parentElement.querySelector("table tr .difficulty-column");
-                    
-                    if(diff_col.hasAttribute("min_stars")) {
-                        diff_col.setAttribute("min_stars", Math.min(diff_col.getAttribute("min_stars"), rating_estimation_elem(result).stars));
-                    } else {
-                        diff_col.setAttribute("min_stars", rating_estimation_elem(result).stars)
+                    let headerRow = set.parentElement.children[0].querySelector("tr");;
+                    if (headerRow && !headerRow.querySelector(".th-diff")) {
+                        let th = document.createElement("th");
+                        th.classList.add("difficulty-column", "th-diff");
+                        th.innerHTML = "";
+                        // Insert after the first header (Problem Name)
+                        headerRow.children[0].after(th);
                     }
 
-                    if(diff_col.hasAttribute("max_stars")) {
-                        diff_col.setAttribute("max_stars", Math.max(diff_col.getAttribute("max_stars"), rating_estimation_elem(result).stars));
-                    } else {
-                        diff_col.setAttribute("max_stars", rating_estimation_elem(result).stars);
-                    }
+                    let rows = table.querySelectorAll("tbody tr");
+                    let fetchQueue = [];
 
-                    if(parent_fullysolved(item.cell.parentElement)) {
-                        if (diff_col.getAttribute("max_stars") == diff_col.getAttribute("min_stars")) {
-                            diff_col.innerHTML = '';
-                            diff_col.appendChild(star_display(diff_col.getAttribute("max_stars")));
+                    rows.forEach(row => {
+                        // Check if this row is a header row
+                        if (row.querySelector("th") || row.classList.contains("thead-dark")) return;
+                        // Prevent duplicate columns if script re-runs
+                        if (row.querySelector(".difficulty-column")) return;
+
+                        let diffTd = document.createElement("td");
+                        diffTd.classList.add("difficulty-column");
+                        diffTd.innerHTML = ""; 
+                        row.children[0].after(diffTd);
+
+                        let link = row.querySelector("a")?.href;
+                        if (link) {
+                            fetchQueue.push({ cell: diffTd, url: link });
+                        }
+                    });
+
+                    for (const item of fetchQueue) {
+                        let result = await set_solvecount(item.url);
+                        item.cell.innerHTML = "";
+                        item.cell.appendChild(rating_estimation_elem(result).elem);
+                        let diff_col = item.cell.parentElement.parentElement.parentElement.parentElement.parentElement.querySelector("table tr .difficulty-column");
+                        
+                        if(diff_col.hasAttribute("min_stars")) {
+                            diff_col.setAttribute("min_stars", Math.min(diff_col.getAttribute("min_stars"), rating_estimation_elem(result).stars));
                         } else {
-                            diff_col.innerHTML = '';
-                            let star_range_elem_to = document.createElement("span");
-                            star_range_elem_to.innerText = " to ";
+                            diff_col.setAttribute("min_stars", rating_estimation_elem(result).stars)
+                        }
 
-                            let star_range_elem = document.createElement("span");
-                            star_range_elem.appendChild(star_display(diff_col.getAttribute("min_stars")));
-                            star_range_elem.appendChild(star_range_elem_to)
-                            star_range_elem.appendChild(star_display(diff_col.getAttribute("max_stars")));
+                        if(diff_col.hasAttribute("max_stars")) {
+                            diff_col.setAttribute("max_stars", Math.max(diff_col.getAttribute("max_stars"), rating_estimation_elem(result).stars));
+                        } else {
+                            diff_col.setAttribute("max_stars", rating_estimation_elem(result).stars);
+                        }
 
-                            diff_col.appendChild(star_range_elem);
+                        if(parent_fullysolved(item.cell.parentElement)) {
+                            if (diff_col.getAttribute("max_stars") == diff_col.getAttribute("min_stars")) {
+                                diff_col.innerHTML = '';
+                                diff_col.appendChild(star_display(diff_col.getAttribute("max_stars")));
+                            } else {
+                                diff_col.innerHTML = '';
+                                let star_range_elem_to = document.createElement("span");
+                                star_range_elem_to.innerText = " to ";
+
+                                let star_range_elem = document.createElement("span");
+                                star_range_elem.appendChild(star_display(diff_col.getAttribute("min_stars")));
+                                star_range_elem.appendChild(star_range_elem_to)
+                                star_range_elem.appendChild(star_display(diff_col.getAttribute("max_stars")));
+
+                                diff_col.appendChild(star_range_elem);
+                            }
                         }
                     }
                 }
+            })();
+        }
+
+        load_solves();
+
+        let btn_solves = document.createElement("button");
+        btn_solves.classList.add("koolbutton");
+        btn_solves.innerHTML = "&nbsp;&nbsp;&nbsp;&nbsp;";
+        let label_solves = document.createElement("label");
+        label_solves.style.marginLeft = "0.45rem";
+        label_solves.innerHTML = "Reload solve rates";
+
+        btn_solves.addEventListener("click", async () => {
+            const keys = await GM_listValues();
+            for (const key of keys) {
+                if (key.includes("solves_")) {
+                    await GM_deleteValue(key);
+                }
             }
-        })();
+
+            window.location.href = window.location.href;
+            load_solves();
+        });
+        $(".custom-control.custom-switch.mb-sm-1")[1].after(label_solves);
+        $(".custom-control.custom-switch.mb-sm-1")[1].after(btn_solves);
     }
 })();
