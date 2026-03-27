@@ -1,7 +1,7 @@
 # Various Australian Informatics Resources
 ORAC Solutions to AIO problems, AIIO Problems, Alpha Contest Problems, FARIO Problems, Other ORAC Problems. By the way, if a problem file is just a number, it refers to [https://orac2.info/problem/id/](#https://orac2.info/problem/id/). Also, I will not include solutions to leaderboarded-questions (Less than 10 people solved) (so I can stay on the leaderboard), or Selection Exam problems (maybe later tho because I don't want to :) ).
 
-Here is a list of the included problem's solutions:
+Here is a list of the included problem's solutions (only updated a few months ago, less than what i've actually done):
 <details>
 <summary>Click to expand</summary>
 
@@ -60,3 +60,6 @@ A tool located in the top folder of this repository which, as injected as a user
 
 ## Advanced AIO Tutorials
 This is a project being worked on right now, to cover some advanced AIO problems, and topics needed to solve them. This also extends into AIIO problems and topics. I hope to also make a userscript to integrate this into orac2.info.
+
+## AIO Notes (kactl.pdf)
+A bunch of notes for AIO, but not really for AIO, just solving problems on ORAC, which usually dont include topics such as bits/heavy math.
