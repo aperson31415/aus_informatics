@@ -24,18 +24,18 @@ AIO
   - AIO 2020: p1-4
   - AIO 2019: p1-4 & 6
   - AIO 2018: p1-4
-  - AIO 2017: p1, 2, 4
-  - AIO 2016: All intermediate
-  - AIO 2015: All
+  - AIO 2017: p1-3, 4, 6
+  - AIO 2016: p1-3
+  - AIO 2015: p1-4
   - AIO 2014: p1
-  - AIO 2013: p1, p2
+  - AIO 2013: p1-2
   - AIO 2012: p1
   - AIO 2011: p1, 2, 4
   - AIO 2010: p1-2, 4-5
   - AIO 2009: p1-3
   - AIO 2008: p1, 2, 4
   - AIO 2007: p1-3
-  - AIO 2006: p1-4
+  - AIO 2006: p1-6
   - AIO 2005: p1-3, 6
 
 AIIO
