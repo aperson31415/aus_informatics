@@ -3,7 +3,7 @@ ORAC Solutions to AIO problems, AIIO Problems, Alpha Contest Problems, FARIO Pro
 
 I'm planning to solve a lot of problems (specifically AIO + AIIO) soon. (Aiming for 5 stars and below full solve).
 
-Here is a list of the included problem's solutions (only updated a few months ago, less than what i've actually done):
+Here is a list of the included problem's solutions (I've solved a few more: some seln ones, and some external ones, which are not original, so not included):
 <details>
 <summary>Click to expand</summary>
 
