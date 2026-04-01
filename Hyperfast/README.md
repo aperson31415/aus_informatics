@@ -6,3 +6,13 @@ Some are very luck-based.
 Yes, these are all by AI.
 
 Currently I only have 1 solution, but there are loads of other O(1) problems on orac.
+
+To add
+- Vases
+- Mixed Fraction
+- Mindbending Scenario
+- Snap Dragons II
+- Culture
+- Pirates
+- Ninjas
+- Any other ez O(1) observation-based ones
