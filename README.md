@@ -8,7 +8,7 @@ Here is a list of the included problem's solutions (I've solved a few more: some
 <summary>Click to expand</summary>
 
   Solutions added so far: Unknown (not bothered to count)
-  Problems I've solved: 125
+  Problems I've solved: 126
   
 
 Starter
@@ -53,7 +53,7 @@ Other Sets
 
 Alpha Contest
   - P1s: All
-  - P2s: 2024
+  - P2s: 2024, 2022
   - P3s: 2023
   - P4s:
 
