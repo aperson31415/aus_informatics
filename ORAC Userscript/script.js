@@ -130,12 +130,12 @@
                 parent.appendChild(wompwomp);
             } else {
                 // Hints
-                for(let i = 0; i < problem_data.hints.length; i++) {
+                for(let i = 0; i < Object.keys(problem_data.hints).length; i++) {
                     let content = "";
-                    for(let j = 0; j < problem_data.hints[i].length; j++) {
-                        content += problem_data.hints[i][j];
+                    for(let j = 0; j < problem_data.hints[Object.keys(problem_data.hints)[i]].length; j++) {
+                        content += problem_data.hints[Object.keys(problem_data.hints)[i]][j];
                     }
-                    let curr_hint = styled_details("Hint " + (i + 1), content, "hint"+i);
+                    let curr_hint = styled_details(Object.keys(problem_data.hints)[i], content, "hint"+i);
                     curr_hint.appendChild(document.createElement("br"));
                     parent.appendChild(curr_hint);
                 }
@@ -156,6 +156,14 @@
                         startFrom: 1
                     });
                 }
+
+                document.getElementsByClassName("inline-code").forEach((elem) => {
+                    hljs.highlightBlock(elem);
+                    hljs.lineNumbersBlock(elem, {
+                        singleLine: false,
+                        startFrom: 1
+                    });
+                });
 
                 let last_update = document.createElement("p");
                 last_update.innerText = "Last updated on " + problem_data.updated;

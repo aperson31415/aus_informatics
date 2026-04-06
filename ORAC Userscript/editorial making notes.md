@@ -8,3 +8,7 @@ There are a lot of supported languages (why?):
 apache, bash, c, coffeescript, cpp, csharp, css, diff, go, http, ini, java, javascript, json, kotlin, less, lua, makefile, xml, markdown, nginx, objectivec, perl, php, php-template, plaintext, properties, python, python-repl, r, ruby, rust, scss, shell, sql, swift, typescript, vbnet, yaml, haskell.
 
 Aliases are in lang_aliases.json
+
+## Inline support
+You can include html (which is why obfuscated html / js is gonna be banned).
+To make inline code, use a code element with the class "language-urlang hljs urlang inline-code" inside a pre element, and for newlines, use \n.
