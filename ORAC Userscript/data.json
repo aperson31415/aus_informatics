@@ -1,0 +1,19 @@
+{
+    "id": {
+        "name":"...",
+        "difficulty":"...",
+        "solved?":true,
+        "statement":"...",
+        "editorial":"blablabla",
+        "solutions":{
+            "lang":"sol"
+        },
+        "updated":"date",
+        "tags": [
+            "..."
+        ],
+        "sets": [
+            "..."
+        ]
+    }
+}
