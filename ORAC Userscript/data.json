@@ -10,7 +10,7 @@
             ]
         ],
         "solutions":{
-            "py": [
+            "Python": [
                 "n = int(input())",
                 "if n < 6: print('0 0 0')",
                 "else: print('1 2 ' + str(n - 3))"
