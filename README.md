@@ -8,7 +8,7 @@ Here is a list of the included problem's solutions (I've solved a few more: some
 <summary>Click to expand</summary>
 
   Solutions added so far: Unknown (not bothered to count)
-  Problems I've solved: 137
+  Problems I've solved: 138
   
 
 Starter
@@ -18,7 +18,7 @@ Starter
 
 AIO
   - AIO 2025: p1-5
-  - AIO 2024: p1-3
+  - AIO 2024: p1-4
   - AIO 2023: p1-5
   - AIO 2022: p1-5
   - AIO 2021: p1-4 & 6
