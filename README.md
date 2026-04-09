@@ -8,7 +8,7 @@ Here is a list of the included problem's solutions (I've solved a few more: some
 <summary>Click to expand</summary>
 
   Solutions added so far: Unknown (not bothered to count)
-  Problems I've solved: 143
+  Problems I've solved: 144
   
 
 Starter
@@ -34,7 +34,7 @@ AIO
   - AIO 2011: p1, 2, 4
   - AIO 2010: p1-5
   - AIO 2009: p1-4
-  - AIO 2008: p1-4, 3sen
+  - AIO 2008: p1-4, 3-4sen
   - AIO 2007: p1-4
   - AIO 2006: p1-6
   - AIO 2005: p1-3, 6
