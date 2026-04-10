@@ -75,6 +75,8 @@ A tool located in the top folder of this repository which, as injected as a user
 
 Now, it comes with editorials for problems (most not added, but slowly and surely they will). However, you need to do 'something' in order to enable the showing of these editorials, to make sure that you have actually tried to solve the problem.
 
+I've also added some old problems which most users can't access now, but given the pdfs/old html stuff. Note that the style is very different, so womp womp kinda.
+
 ## Advanced AIO Tutorials
 This is a project being worked on right now, to cover some advanced AIO problems, and topics needed to solve them. This also extends into AIIO problems and topics. I hope to also make [now include inside] a userscript to integrate this into orac2.info.
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ORAC Userscript
 // @namespace    http://tampermonkey.net/
-// @version      v3.4.5
+// @version      v3.4.2
 // @description  Custom tags in orac, hidden problems, difficulty approximation, searching upgrade, custom styling & ordering, editorials
 // @author       a_person31415
 // @match        https://orac2.info/hub/personal/*
@@ -26,8 +26,8 @@
         return contents;
     }
 
-    let TAG_ORDER = ["starter", "training", "aio", "acio", "aiio", "alpha", "fario", "camp", "seln", "apio", "ioi","cpp-practice", "testing", "custom-tags"];
-    let NEW_TAGS = ["starter", "training", "acio", "cpp-practice", "custom-tags"];
+    let TAG_ORDER = ["starter", "training", "aic", "aio", "acio", "aiio", "alpha", "fario", "precamp", "camp", "seln", "apio", "ioi","cpp-practice", "testing", "custom-tags"];
+    let NEW_TAGS = ["starter", "training", "aic", "acio", "cpp-practice", "custom-tags"];
 
     GM_addStyle(`
         .badge-tag { margin-right: 4px; cursor: pointer; background-color: #f8f9fa; color: #333; user-select: none;}
@@ -45,7 +45,7 @@
         #rangevalue { font-size: 14px; font-weight: bold; color: #4CAF50; white-space: nowrap; min-width: 80px; }
         .slider-track { position: absolute; height: 5px; width: 100%; background: #ddd; top: 50%; transform: translateY(-50%); border-radius: 5px; z-index: 1; }
         .slider-range { position: absolute; height: 5px; background: #4CAF50; top: 50%; transform: translateY(-50%); border-radius: 5px; z-index: 2; }
-        
+
         input[type=range] { position: absolute; width: 100%; height: 30px; top: 50%; transform: translateY(-50%); left: 0; margin: 0; pointer-events: none; -webkit-appearance: none; background: transparent; z-index: 3; }
         input[type=range]::-webkit-slider-thumb { pointer-events: all; width: 16px; height: 16px; border-radius: 50%; background: #4CAF50; cursor: pointer; -webkit-appearance: none; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         input[type=range]::-moz-range-thumb { pointer-events: all; width: 16px; height: 16px; border-radius: 50%; background: #4CAF50; cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
@@ -102,6 +102,91 @@
         }
     }
 
+    function getProblemId(url) {
+        const segments = url.pathname.split('/').filter(s => s.length > 0);
+        return segments[segments.length - 1];
+    }
+
+    function injectStyles(cssUrls) {
+        cssUrls.forEach(url => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = url;
+            document.head.appendChild(link);
+        });
+    }
+
+    const old_problems = ["aic00p1","aic00p2","aic00p3","aic00p4","aic01p1","aic01p2","aic01p3","aic01p4","aic02p1","aic02p2","aic02p3","aic03p2","aic03p3","aic03p4","aic04p1","aic04p2","aic04p3","aic04p4","aic04p5","aic98p1","aic98p2","aic98p3","aic99p1","aic99p2","aic99p3","dscannons","dsfenwickxor","dsinversioncounting","dslazyupdate","dsrangetreeupdates","dssupplies","monthly05p1","monthly05p2","monthly05p3","precamppublic2"];
+
+    const checkInterval = setInterval(() => {
+        const h1 = document.querySelector("h1");
+        if (h1) {
+            clearInterval(checkInterval);
+            checkAndRestore();
+        }
+    }, 100);
+
+    async function checkAndRestore() {
+        if (window.location.href.includes("problem") && !window.location.href.includes("hof") && !window.location.href.includes("submission")) {
+            const url = new URL(window.location.href);
+            const problem_id = getProblemId(url);
+            const h1 = document.querySelector("h1");
+            const pageHeading = h1 ? h1.innerText.toLowerCase().trim() : "";
+
+            const isErrorPage = pageHeading.includes('access denied') || 
+                                pageHeading.includes('page requested does not exist') || 
+                                pageHeading.includes('page not found');
+
+            if (old_problems.includes(problem_id) && isErrorPage) {
+                
+                document.body.innerHTML = `<div style="text-align:center; margin-top:100px; font-family:sans-serif;"><h2>Restoring ${problem_id}...</h2></div>`;
+
+                const cdnBase = `https://cdn.jsdelivr.net/gh/aperson31415/informatics@main/wayback_raw/${problem_id}`;
+                const navHtml = `
+                    <div style="background:#1a1a1a; color:white; padding:12px 20px; font-family:sans-serif; display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #3498db; position:relative; z-index:9999;">
+                        <span style="font-size: 14px;">Restored Problem: <strong style="color:#3498db;">${problem_id}</strong></span>
+                        <a href="https://orac2.info/hub/personal" style="color:white; text-decoration:none; font-size: 14px; background:#3498db; padding: 5px 12px; border-radius: 4px; font-weight:bold;">← Hub</a>
+                    </div>`;
+
+                try {
+                    // Try HTML first
+                    const htmlResp = await fetch(`${cdnBase}.html`);
+                    if (htmlResp.ok) {
+                        const htmlText = await htmlResp.text();
+                        if (!htmlText.includes("404: Not Found")) {
+                            document.open();
+                            // Write nav + content
+                            document.write(navHtml + htmlText);
+                            document.close();
+                            injectStyles(["https://github.com/aperson31415/informatics/blob/main/ORAC%20Userscript/ben-aioc.css", "https://github.com/aperson31415/informatics/blob/main/ORAC%20Userscript/bootstrap_min.css", "https://github.com/aperson31415/informatics/blob/main/ORAC%20Userscript/bootstrap_responsive.css"]);
+                            return;
+                        }
+                    }
+
+                    // Try PDF second
+                    const pdfResp = await fetch(`${cdnBase}.pdf`);
+                    if (pdfResp.ok) {
+                        const pdfBlob = await pdfResp.blob();
+                        if (pdfBlob.size > 500) {
+                            document.body.innerHTML = `
+                                <style>body,html{margin:0;padding:0;height:100%;overflow:hidden;display:flex;flex-direction:column;}</style>
+                                ${navHtml}
+                                <embed src="${cdnBase}.pdf" type="application/pdf" style="flex-grow:1; width:100%;" />
+                            `;
+                            injectStyles(["https://github.com/aperson31415/informatics/blob/main/ORAC%20Userscript/ben-aioc.css", "https://github.com/aperson31415/informatics/blob/main/ORAC%20Userscript/bootstrap_min.css", "https://github.com/aperson31415/informatics/blob/main/ORAC%20Userscript/bootstrap_responsive.css"]);
+                            return;
+                        }
+                    }
+
+                    document.body.innerHTML = navHtml + `<h1 style="text-align:center; margin-top:50px;">Backup not found.</h1>`;
+                } catch (e) {
+                    document.body.innerHTML = navHtml + `<h1 style="text-align:center; margin-top:50px;">Fetch error.</h1>`;
+                }
+            }
+        }
+    }
+
     if(window.location.href.includes("problem") && window.location.href.includes("submissions")) {
         let aliases = {
             "py": "python",
@@ -152,7 +237,7 @@
                             parent.appendChild(curr_hint);
                         });
                     }
-                    
+
                     // Code
                     if(problem_data.solutions != null && problem_data.solutions != undefined) {
                         Object.keys(problem_data.solutions).forEach((lg) => {
@@ -328,20 +413,20 @@
             }
         }
 
-        // Difficulty 
+        // Difficulty
 
         async function get_solvecount(problem_url) {
             let url = problem_url + "/hof";
             try {
                 const res = await fetch(url);
                 const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
-                
+
                 // Standard problem page
                 let solversList = doc.querySelector("#solversList");
                 if (solversList) {
                     return doc.querySelector("b")?.innerText || "0";
-                } 
-                
+                }
+
                 // Leaderboard/Contest style problem
                 let solves = 0;
                 let solve_elems = doc.querySelectorAll(".solvecount");
@@ -399,18 +484,18 @@
         async function get_badge_data(url) {
             // Check individual storage key first
             let entry = GM_getValue("score_" + url, null);
-            
+
             if (!entry || typeof entry !== 'object') {
                 try {
                     const res = await fetch(url);
                     const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
                     let score_el = doc.querySelector(".badge.hub-badge");
-                    entry = score_el ? { score: score_el.innerText.trim(), style: score_el.className } 
+                    entry = score_el ? { score: score_el.innerText.trim(), style: score_el.className }
                                      : { score: "0", style: "badge hub-badge badge-no-submission" };
                     // Save result immediately after fetch
                     GM_setValue("score_" + url, entry);
-                } catch (e) { 
-                    entry = { score: "0", style: "badge hub-badge badge-no-submission" }; 
+                } catch (e) {
+                    entry = { score: "0", style: "badge hub-badge badge-no-submission" };
                 }
             }
             return entry;
@@ -427,7 +512,8 @@
                         { "problem_name":"Queues", "problem_link":"https://orac2.info/problem/752/" },
                         { "problem_name":"Bracket Matching", "problem_link":"https://orac2.info/problem/1107/" },
                         { "problem_name":"Twin Primes", "problem_link":"https://orac2.info/problem/872/" },
-                        { "problem_name":"Pairs", "problem_link":"https://orac2.info/problem/947/" }
+                        { "problem_name":"Pairs", "problem_link":"https://orac2.info/problem/947/" },
+                        { "problem_name":"Reverse Polish Notation", "problem_link":"https://orac2.info/problem/precamppublic2"}
                     ]},
                     { "tag":"training", "set_name":"Graph Problems", "set_id":"graph", "problems": [
                         { "problem_name":"Quicksort", "problem_link":"https://orac2.info/problem/659/" },
@@ -445,14 +531,66 @@
                         { "problem_name":"Triple Hunting (C++ Only)", "problem_link":"https://orac2.info/problem/1306/" },
                         { "problem_name":"Sitting or Standing (C++ Only)", "problem_link":"https://orac2.info/problem/1308/" },
                         { "problem_name":"A Dish Best served Cold (C++ Only)", "problem_link":"https://orac2.info/problem/1310/" }
+                    ]},
+                    { "tag":"aic", "set_name":"AIC 1998", "set_id":"aic98", "problems": [
+                        { "problem_name":"Shopping Malls", "problem_link":"https://orac2.info/problem/aic98p1"},
+                        { "problem_name":"Anagram Solver", "problem_link":"https://orac2.info/problem/aic98p2"},
+                        { "problem_name":"Building Integers", "problem_link":"https://orac2.info/problem/aic98p3"},
+                    ]},
+                    { "tag":"aic", "set_name":"AIC 1999", "set_id":"aic99", "problems": [
+                        { "problem_name":"Hailstone Sequences", "problem_link":"https://orac2.info/problem/aic99p1"},
+                        { "problem_name":"Hunt-a-Word", "problem_link":"https://orac2.info/problem/aic99p2"},
+                        { "problem_name":"Cartography", "problem_link":"https://orac2.info/problem/aic99p3"},
+                    ]},
+                    { "tag":"aic", "set_name":"AIC 2000", "set_id":"aic00", "problems": [
+                        { "problem_name":"Academic Espionage", "problem_link":"https://orac2.info/problem/aic00p1"},
+                        { "problem_name":"Keeping Secret", "problem_link":"https://orac2.info/problem/aic00p2"},
+                        { "problem_name":"Analysing Bach", "problem_link":"https://orac2.info/problem/aic00p3"},
+                        { "problem_name":"Displaying Paintings", "problem_link":"https://orac2.info/problem/aic00p4"},
+                    ]},
+                    { "tag":"aic", "set_name":"AIC 2001", "set_id":"aic01", "problems": [
+                        { "problem_name":"Flowers", "problem_link":"https://orac2.info/problem/aic01p1"},
+                        { "problem_name":"Cartography III", "problem_link":"https://orac2.info/problem/aic01p2"},
+                        { "problem_name":"Spies", "problem_link":"https://orac2.info/problem/aic01p3"},
+                        { "problem_name":"Mobiles", "problem_link":"https://orac2.info/problem/aic01p4"},
+                    ]},
+                    { "tag":"aic", "set_name":"AIC 2002", "set_id":"aic02", "problems": [
+                        { "problem_name":"Halloween", "problem_link":"https://orac2.info/problem/aic02p1"},
+                        { "problem_name":"Cartography II", "problem_link":"https://orac2.info/problem/aic02p2"},
+                        { "problem_name":"Bureaucratic Bungling", "problem_link":"https://orac2.info/problem/aic02p3"}
+                    ]},
+                    { "tag":"aic", "set_name":"AIC 2003", "set_id":"aic03", "problems": [
+                        { "problem_name":"Word Wrap", "problem_link":"https://orac2.info/problem/aic03p2"},
+                        { "problem_name":"Stacking Numbers", "problem_link":"https://orac2.info/problem/aic03p3"},
+                        { "problem_name":"Handwriting Recognition", "problem_link":"https://orac2.info/problem/aic03p4"}
+                    ]},
+                    { "tag":"aic", "set_name":"AIC 2004", "set_id":"aic04", "problems": [
+                        { "problem_name":"Bugs", "problem_link":"https://orac2.info/problem/aic04p1"},
+                        { "problem_name":"AFL", "problem_link":"https://orac2.info/problem/aic04p2"},
+                        { "problem_name":"Atlantis", "problem_link":"https://orac2.info/problem/aic04p3"},
+                        { "problem_name":"Zig-Zag Cipher", "problem_link":"https://orac2.info/problem/aic04p4"},
+                        { "problem_name":"Bouncy Ball", "problem_link":"https://orac2.info/problem/aic04p5"},
+                    ]},
+                    { "tag":"training", "set_name":"Data Structure Excercises", "set_id":"trainingds", "problems": [
+                        { "problem_name":"Cannons", "problem_link":"https://orac2.info/problem/dscannons"},
+                        { "problem_name":"XOR Queries", "problem_link":"https://orac2.info/problem/dsfenwickxor"},
+                        { "problem_name":"Inversion Counting", "problem_link":"https://orac2.info/problem/dsinversioncounting"},
+                        { "problem_name":"Lazy Updates", "problem_link":"https://orac2.info/problem/dslazyupdate"},
+                        { "problem_name":"Min Tree with Updates", "problem_link":"https://orac2.info/problem/dsrangetreeupdates"},
+                        { "problem_name":"Supplies", "problem_link":"https://orac2.info/problem/dssupplies"}
+                    ]},
+                    { "tag":"training", "set_name":"2005 April Monthly Problems", "set_id":"monthly05", "problems": [
+                        { "problem_name":"Anagrammatic Primes", "problem_link":"https://orac2.info/problem/monthly05p1"},
+                        { "problem_name":"Packing Pentominoes", "problem_link":"https://orac2.info/problem/monthly05p2"},
+                        { "problem_name":"Nine Clocks", "problem_link":"https://orac2.info/problem/monthly05p3"}
                     ]}
                 ]
             };
 
             let c_tags = GM_getValue("tags", {});
             for(let t in c_tags) {
-                data.sets.push({ 
-                    tag: "custom-tags", set_name: "Custom Tag: " + t, set_id: "c-" + t.replace(/\s+/g, '-'), 
+                data.sets.push({
+                    tag: "custom-tags", set_name: "Custom Tag: " + t, set_id: "c-" + t.replace(/\s+/g, '-'),
                     problems: c_tags[t].map(l => ({ problem_name: GM_getValue("name_" + l, "Unknown"), problem_link: l })),
                     tooltip_text: "Tags: " + t
                 });
@@ -483,7 +621,7 @@
                 let div = document.createElement("div");
                 div.id = "custom_set-" + set.set_id;
                 div.className = `problemset-display set-table set-tag-${set.tag}`;
-                
+
                 let tooltip = set.tooltip_text || "Tags: " + set.tag;
                 div.innerHTML = `
                     <table class="table table-sm mt-0 mb-0 pointer" data-toggle="collapse" data-target="#collapse-${set.set_id}">
@@ -527,13 +665,13 @@
                     document.getElementById("table-" + set.set_id).appendChild(tr);
 
                     let badge_node = document.createElement("span");
-                    badge_node.className = "badge badge-secondary"; 
+                    badge_node.className = "badge badge-secondary";
                     badge_node.innerText = "Fetching score...";
                     tr.children[1].appendChild(badge_node);
 
                     let entry = await get_badge_data(p.problem_link);
                     badge_node.innerText = entry.score;
-                    badge_node.className = entry.style; 
+                    badge_node.className = entry.style;
                     return entry;
                 });
 
@@ -544,7 +682,7 @@
 
                     const score_el = div.querySelector('.score-display');
                     score_el.innerText = `${total} / ${max}`;
-                    
+
                     let hClass = "badge-no-submission";
                     if (attempted) {
                         if (total === max) hClass = "badge-cmsgreen";
@@ -626,19 +764,19 @@
         }
 
         // --- SOLVE COUNT LOGIC ---
-        
+
         async function get_solvecount(problem_url) {
             let url = problem_url + "/hof";
             try {
                 const res = await fetch(url);
                 const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
-                
+
                 // Standard problem page
                 let solversList = doc.querySelector("#solversList");
                 if (solversList) {
                     return doc.querySelector("b")?.innerText || "0";
-                } 
-                
+                }
+
                 // Leaderboard/Contest style problem
                 let solves = 0;
                 let solve_elems = doc.querySelectorAll(".solvecount");
@@ -707,7 +845,7 @@
 
                         let diffTd = document.createElement("td");
                         diffTd.classList.add("difficulty-column");
-                        diffTd.innerHTML = ""; 
+                        diffTd.innerHTML = "";
                         row.children[0].after(diffTd);
 
                         let link = row.querySelector("a")?.href;
@@ -721,7 +859,7 @@
                         item.cell.innerHTML = "";
                         item.cell.appendChild(rating_estimation_elem(result).elem);
                         let diff_col = item.cell.parentElement.parentElement.parentElement.parentElement.parentElement.querySelector("table tr .difficulty-column");
-                        
+
                         if(diff_col.hasAttribute("min_stars")) {
                             diff_col.setAttribute("min_stars", Math.min(diff_col.getAttribute("min_stars"), rating_estimation_elem(result).stars));
                         } else {
@@ -798,7 +936,7 @@
         let maxslide = document.createElement("input"); maxslide.id = "maxRange"; maxslide.setAttribute("type", "range"); maxslide.setAttribute("min", "0"); maxslide.setAttribute("max", "9"); maxslide.setAttribute("value", "9");
         let sliderdisplay = document.createElement("span"); sliderdisplay.id = "rangevalue"; sliderdisplay.innerText = "0 &#9733; - 9 &#9733;";
 
-        let sliderWrapper = document.createElement("div"); 
+        let sliderWrapper = document.createElement("div");
         sliderWrapper.style = "position:relative; width:200px; height:30px; margin-left:10px;";
         sliderWrapper.append(slidertrack, sliderrange, minslide, maxslide);
         slidercont.append(sliderdisplay, sliderWrapper);
@@ -867,7 +1005,7 @@
 
             document.querySelectorAll(".problemset-display.set-table").forEach((set) => {
                 let oneProblemMatches = false;
-                
+
                 // 1. Check if the Category/Set Title matches the search
                 let titleHeader = set.querySelector('[scope="col"]');
                 let setTitle = titleHeader ? titleHeader.innerText.toLowerCase() : "";
@@ -888,7 +1026,7 @@
 
                     if (searchphrase === "" || problemMatches || setTitleMatches) {
                         problem.setAttribute("data-visible", "true");
-                        oneProblemMatches = true; 
+                        oneProblemMatches = true;
                     } else {
                         problem.setAttribute("data-visible", "false");
                     }
