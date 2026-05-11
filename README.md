@@ -12,7 +12,7 @@ Here is a list of the included problem's solutions (I've solved a few more: some
 <summary>Click to expand</summary>
 
   Solutions added so far: Unknown (not bothered to count)
-  Problems I've solved: 159 (Yay! 150)
+  Problems I've solved: 161
   
 
 Starter
